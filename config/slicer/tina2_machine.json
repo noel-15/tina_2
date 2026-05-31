@@ -1,0 +1,18 @@
+{
+    "type": "machine",
+    "name": "WEEFUN Tina 2 0.4 nozzle",
+    "inherits": "MyMarlin 0.4 nozzle",
+    "from": "system",
+    "instantiation": "true",
+    "printer_model": "WEEFUN Tina 2",
+    "printable_area": [
+        "0x0",
+        "120x0",
+        "120x100",
+        "0x100"
+    ],
+    "printable_height": "100",
+    "machine_start_gcode": "G90\nM82\nM104 S[first_layer_temperature]\nM140 S[first_layer_bed_temperature]\nG28\nG92 E0\nM190 S[first_layer_bed_temperature]\nM109 S[first_layer_temperature]\nG92 E0",
+    "machine_end_gcode": "M104 S0\nM140 S0\nM107\nG28 X0 Y0\nM84",
+    "before_layer_change_gcode": "G92 E0"
+}

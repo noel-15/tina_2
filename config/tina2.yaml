@@ -13,7 +13,11 @@ paths:
 slicer:
   type: orca
   executable: "C:/Program Files/OrcaSlicer/orca-slicer.exe"
-  settings: []
+  datadir: "C:/Users/bugon/AppData/Roaming/OrcaSlicer/system"
+  settings:
+    - config/slicer/tina2_machine.json
+    - config/slicer/tina2_process.json
+    - config/slicer/tina2_pla.json
   extra_args: []
 
 github:

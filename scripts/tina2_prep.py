@@ -94,7 +94,19 @@ def convert_to_stl(src: Path, dest: Path) -> Path:
     return dest
 
 
-def run_slice(cfg: dict, stl_path: Path, out_dir: Path) -> Path:
+def default_orca_settings(cfg: dict) -> list[Path]:
+    slicer = cfg["slicer"]
+    settings = slicer.get("settings") or []
+    if settings:
+        return [(ROOT / p).resolve() if not Path(p).is_absolute() else Path(p) for p in settings]
+    return [
+        ROOT / "config/slicer/tina2_machine.json",
+        ROOT / "config/slicer/tina2_process.json",
+        ROOT / "config/slicer/tina2_pla.json",
+    ]
+
+
+def run_slice(cfg: dict, stl_path: Path, out_dir: Path, gcode_name: str | None = None) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     slicer = cfg["slicer"]
     exe = Path(slicer["executable"])
@@ -103,27 +115,27 @@ def run_slice(cfg: dict, stl_path: Path, out_dir: Path) -> Path:
             f"Slicer not found: {exe}\nInstall Orca Slicer and set slicer.executable in config/tina2.yaml"
         )
     stype = slicer.get("type", "orca").lower()
-    gcode_path = out_dir / f"{stl_path.stem}.gcode"
+    final_name = gcode_name or f"{stl_path.stem}.gcode"
+    gcode_path = out_dir / final_name
+    for old in out_dir.glob("plate_*.gcode"):
+        old.unlink(missing_ok=True)
     if gcode_path.is_file():
         gcode_path.unlink()
 
     cmd: list[str] = [str(exe)]
-    settings = slicer.get("settings") or []
     if stype == "orca":
-        if settings:
-            joined = ";".join(str(Path(s)) for s in settings)
-            cmd.extend(["--load-settings", joined])
-        cmd.extend(
-            [
-                "--slice",
-                "0",
-                "--export-gcode",
-                "--outputdir",
-                str(out_dir),
-                str(stl_path),
-            ]
+        datadir = slicer.get("datadir") or str(
+            Path.home() / "AppData/Roaming/OrcaSlicer/system"
         )
+        cmd.extend(["--datadir", str(Path(datadir))])
+        setting_paths = default_orca_settings(cfg)
+        missing = [p for p in setting_paths if not p.is_file()]
+        if missing:
+            raise SystemExit("Missing slicer profile files:\n" + "\n".join(str(p) for p in missing))
+        joined = ";".join(str(p).replace("\\", "/") for p in setting_paths)
+        cmd.extend(["--load-settings", joined, "--slice", "0", "--outputdir", str(out_dir), str(stl_path)])
     elif stype == "prusa":
+        settings = slicer.get("settings") or []
         for s in settings:
             cmd.extend(["--load", str(s)])
         cmd.extend(["--export-gcode", str(stl_path), "--output", str(gcode_path)])
@@ -132,25 +144,40 @@ def run_slice(cfg: dict, stl_path: Path, out_dir: Path) -> Path:
 
     extra = slicer.get("extra_args") or []
     if extra:
-        cmd[1:1] = [str(x) for x in extra]
+        cmd.extend(str(x) for x in extra)
 
     print("Running:", " ".join(cmd))
     proc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
     if proc.stdout:
         print(proc.stdout)
-    if proc.returncode != 0:
-        if proc.stderr:
-            print(proc.stderr, file=sys.stderr)
-        raise SystemExit(f"Slicer failed with code {proc.returncode}")
+    if proc.stderr:
+        print(proc.stderr, file=sys.stderr)
 
-    if not gcode_path.is_file():
-        candidates = sorted(out_dir.glob(f"{stl_path.stem}*.gcode"))
-        if not candidates:
+    produced: Path | None = None
+    if gcode_path.is_file():
+        produced = gcode_path
+    else:
+        plates = sorted(out_dir.glob("plate_*.gcode"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if plates:
+            produced = plates[0]
+            if produced.name != gcode_path.name:
+                produced.rename(gcode_path)
+                produced = gcode_path
+        else:
             candidates = sorted(out_dir.glob("*.gcode"), key=lambda p: p.stat().st_mtime, reverse=True)
-        if not candidates:
-            raise SystemExit("Slicer finished but no .gcode was produced")
-        gcode_path = candidates[0]
-    return gcode_path
+            if candidates:
+                produced = candidates[0]
+                if produced.name != gcode_path.name:
+                    produced.rename(gcode_path)
+                    produced = gcode_path
+
+    if produced is None:
+        if proc.returncode != 0:
+            raise SystemExit(f"Slicer failed with code {proc.returncode}")
+        raise SystemExit("Slicer finished but no .gcode was produced")
+    if proc.returncode not in (0, None) and proc.returncode != 0:
+        print(f"Warning: slicer exit code {proc.returncode} but G-code was produced", file=sys.stderr)
+    return produced
 
 
 def read_pat(cfg: dict) -> str:
@@ -239,33 +266,78 @@ def deploy_sd(cfg: dict, gcode_path: Path) -> None:
     print(f"Copied to {dest}")
 
 
-def cmd_prepare(args: argparse.Namespace) -> None:
-    cfg = load_config(Path(args.config) if args.config else None)
-    src = Path(args.input).resolve()
-    if not src.is_file():
-        raise SystemExit(f"Input not found: {src}")
+def prepare_one(
+    cfg: dict,
+    src: Path,
+    *,
+    scale: float | None = None,
+    target_mm: float | None = None,
+    fit_bed: bool = False,
+    no_push: bool = False,
+    deploy: bool = False,
+    prefix: str | None = None,
+) -> Path:
     work_dir = resolve_path(cfg, "work")
     out_dir = resolve_path(cfg, "out")
-    work_stl = work_dir / f"{slugify(src.stem)}.stl"
+    base_slug = slugify(src.stem)
+    if prefix:
+        base_slug = f"{slugify(prefix)}-{base_slug}"
+    work_stl = work_dir / f"{base_slug}.stl"
     convert_to_stl(src, work_stl)
     mesh = load_mesh(work_stl)
-    if args.fit_bed:
+    if fit_bed:
         factor = fit_factor(mesh, cfg)
         print(f"fit-bed scale factor: {factor:.4f}")
         mesh = scale_mesh(mesh, factor)
-    elif args.target_mm is not None:
-        factor = target_factor(mesh, args.target_mm)
+    elif target_mm is not None:
+        factor = target_factor(mesh, target_mm)
         print(f"target-mm scale factor: {factor:.4f}")
         mesh = scale_mesh(mesh, factor)
-    elif args.scale is not None:
-        mesh = scale_mesh(mesh, args.scale)
+    elif scale is not None:
+        mesh = scale_mesh(mesh, scale)
     write_stl(mesh, work_stl)
-    gcode = run_slice(cfg, work_stl, out_dir)
+    gcode = run_slice(cfg, work_stl, out_dir, gcode_name=f"{base_slug}.gcode")
     print(f"G-code: {gcode}")
-    if not args.no_push:
+    if not no_push:
         publish_gcode(cfg, gcode)
-    if args.deploy:
+    if deploy:
         deploy_sd(cfg, gcode)
+    return gcode
+
+
+def cmd_prepare(args: argparse.Namespace) -> None:
+    cfg = load_config(Path(args.config) if args.config else None)
+    src = Path(args.input).resolve()
+    if src.is_dir():
+        stls = sorted(src.glob("*.stl"))
+        if not stls:
+            raise SystemExit(f"No .stl files in {src}")
+        folder_prefix = args.prefix or slugify(src.name)
+        for stl in stls:
+            print(f"\n=== {stl.name} ===")
+            prepare_one(
+                cfg,
+                stl,
+                scale=args.scale,
+                target_mm=args.target_mm,
+                fit_bed=args.fit_bed,
+                no_push=args.no_push,
+                deploy=args.deploy,
+                prefix=folder_prefix,
+            )
+        return
+    if not src.is_file():
+        raise SystemExit(f"Input not found: {src}")
+    prepare_one(
+        cfg,
+        src,
+        scale=args.scale,
+        target_mm=args.target_mm,
+        fit_bed=args.fit_bed,
+        no_push=args.no_push,
+        deploy=args.deploy,
+        prefix=args.prefix,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -314,6 +386,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--fit-bed", action="store_true", help="Uniform scale to fit configured bed")
     sp.add_argument("--no-push", action="store_true", help="Skip GitHub push")
     sp.add_argument("--deploy", action="store_true", help="Copy gcode to SD after slice")
+    sp.add_argument("--prefix", help="Prefix for output names (default: folder name when input is a directory)")
     sp.set_defaults(func=cmd_prepare)
 
     return p

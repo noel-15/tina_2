@@ -1,0 +1,14 @@
+{
+    "type": "process",
+    "name": "0.20mm Tina 2 @MyMarlin",
+    "inherits": "fdm_process_marlin_common",
+    "from": "system",
+    "instantiation": "true",
+    "layer_height": "0.2",
+    "layer_gcode": "G92 E0",
+    "before_layer_change_gcode": "G92 E0",
+    "compatible_printers": [
+        "WEEFUN Tina 2 0.4 nozzle"
+    ],
+    "enable_support": "0"
+}

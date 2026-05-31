@@ -19,9 +19,12 @@ description: >-
 ```powershell
 pip install -r requirements.txt
 python scripts/tina2_prep.py info models/inbox/model.stl
+python scripts/tina2_prep.py prepare models/inbox/model.stl
+python scripts/tina2_prep.py prepare "Fidget+Finger+Massager+2000!" --prefix fidget-finger-massager-2000
 python scripts/tina2_prep.py prepare models/inbox/model.stl --fit-bed --deploy
-python scripts/tina2_prep.py prepare models/inbox/model.stl --scale 0.8 --no-push
 ```
+
+**Scaling:** Finger-sized MakersWorld models are usually correct at 100% — do **not** use `--fit-bed` unless you intentionally want “as large as the bed.”
 
 ## `prepare` pipeline
 
