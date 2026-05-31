@@ -18,30 +18,20 @@ description: >-
 
 ```powershell
 pip install -r requirements.txt
-python scripts/tina2_prep.py info models/inbox/model.stl
-python scripts/tina2_prep.py prepare models/inbox/model.stl
+python scripts/tina2_prep.py preview "Fidget+Finger+Massager+2000!"
 python scripts/tina2_prep.py prepare "Fidget+Finger+Massager+2000!" --prefix fidget-finger-massager-2000
-python scripts/tina2_prep.py prepare models/inbox/model.stl --fit-bed --deploy
+python scripts/tina2_prep.py prepare models/inbox/single-part.stl
 ```
 
-**Scaling:** Finger-sized MakersWorld models are usually correct at 100% — do **not** use `--fit-bed` unless you intentionally want “as large as the bed.”
+**Folders:** `prepare` on a folder always produces **one combined** `-plate.gcode` (see `plate.exclude_by_default` in config). Use `--separate` only if you need one file per STL.
 
-## `prepare` pipeline
-
-convert → scale (`--fit-bed`, `--scale`, or `--target-mm`) → slice → copy to `gcode/` → **git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" + push** (unless `--no-push`) → optional `--deploy` to `sd.drive`.
+**Preview:** `preview` opens **Orca Slicer** with the same STLs that would go on the plate — use Prepare / slice preview there. GitHub only stores G-code text, not a 3D view.
 
 ## GitHub
 
 - Remote: https://github.com/noel-15/tina_2
-- Token key: `GITHUB_TINA_PAT` in `github.token_file` (default `C:/Users/bugon/.config/list.txt`).
-- Only publish under `gcode/`; do not commit inbox STLs or credentials.
+- Publish only under `gcode/` (prefer single `*-plate.gcode` per model kit).
 
 ## Slicer setup
 
 See [config/slicer/README.md](../../config/slicer/README.md).
-
-## Failures
-
-- Slicer missing: set `slicer.executable` after installing Orca.
-- Push fails: verify PAT has `repo` scope and key name `GITHUB_TINA_PAT`.
-- Too large: use `--fit-bed` or lower `--scale`.

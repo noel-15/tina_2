@@ -29,3 +29,9 @@ github:
 
 sd:
   drive: null
+
+# When preparing a folder, one combined plate G-code (not one file per STL).
+plate:
+  exclude_by_default:
+    - roller_bumps.stl
+    - roller_round.stl
