@@ -20,4 +20,4 @@ Bed (config): 100 x 120 x 100 mm
 
 ## Preview
 
-Open `preview/magic-spinning-top-inventory-plate.stl` or `preview/magic-spinning-top-plate.stl` in Orca if present.
+Regenerate a preview STL with: `python scripts/tina2_prep.py preview inbox/magic-spinning-top --prefix magic-spinning-top`

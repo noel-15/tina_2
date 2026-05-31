@@ -5,10 +5,11 @@
   fit_margin: 0.95
 
 paths:
-  inbox: models/inbox
-  work: models/work
-  out: models/out
-  gcode: gcode
+  inbox: inbox
+  work: .cache/work
+  out: .cache/out
+  preview: .cache/preview
+  prints: prints
 
 slicer:
   type: orca

@@ -1,0 +1,30 @@
+# Fidget Finger Massager 2000 — MakersWorld kit (ale152)
+# Photos: hexagonal rollers WITH bumps. Print 9 rollers + 9 rods (8 + spare).
+name: fidget-finger-massager-2000
+folder_match:
+  - fidget+finger+massager+2000!
+  - fidget-finger-massager-2000
+
+ignore:
+  - roller_plain.stl
+  - roller_round.stl
+
+# Separate plates match designer orientations (ring / rods / rollers).
+plate_groups:
+  - id: ring
+    parts:
+      - stl: ring.stl
+        count: 1
+    orient_note: "Print flat, holes facing up"
+  - id: rods
+    parts:
+      - stl: rod.stl
+        count: 9
+    orient_note: "Long axis horizontal on bed"
+  - id: rollers
+    parts:
+      - stl: roller_bumps.stl
+        count: 9
+    orient_note: "Print vertical (strong axis)"
+
+assembly: "Press rod into roller, then into ring; CA glue on ring side."

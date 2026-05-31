@@ -28,4 +28,4 @@ Bed (config): 100 x 120 x 100 mm
 
 ## Preview
 
-Open `preview/fidget-finger-massager-2000-inventory-plate.stl` or `preview/fidget-finger-massager-2000-plate.stl` in Orca if present.
+Regenerate a preview STL with: `python scripts/tina2_prep.py preview inbox/<slug> --prefix <slug>`

@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "3d-printer-orca": {
+      "command": "npx",
+      "args": ["-y", "mcp-3d-printer-server@latest"],
+      "env": {
+        "SLICER_TYPE": "orcaslicer",
+        "SLICER_PATH": "C:\\Program Files\\OrcaSlicer\\orca-slicer.exe",
+        "ORCA_SLICER_PATH": "C:\\Program Files\\OrcaSlicer\\orca-slicer.exe",
+        "PRINTER_TYPE": "octoprint",
+        "API_URL": "http://127.0.0.1:7125",
+        "API_KEY": "not-used-for-tina2-sd-printing"
+      }
+    }
+  }
+}

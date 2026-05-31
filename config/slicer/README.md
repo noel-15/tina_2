@@ -16,7 +16,7 @@
      ```
 6. Test slice from GUI once, then:
    ```powershell
-   python scripts/tina2_prep.py slice models/work/your-model.stl
+   python scripts/tina2_prep.py slice .cache/work/your-model.stl
    ```
 
 Wiibuilder/WEEFUN app can still be used manually; this project uses Orca for scripted G-code.

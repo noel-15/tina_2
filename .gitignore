@@ -2,15 +2,19 @@
 .env
 **/list.txt
 *token*
-models/inbox/**
-models/work/**
-!models/inbox/.gitkeep
-!models/work/.gitkeep
+
+# Raw downloads (keep folder only)
+inbox/**
+!inbox/.gitkeep
+
+# Slice cache (not committed)
+.cache/**
+
+# CAD meshes (local only)
 *.stl
 *.3mf
 *.step
 *.zip
-!models/test/*.stl
-models/out/**
+
 __pycache__/
 .venv/

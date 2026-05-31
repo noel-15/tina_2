@@ -23,4 +23,4 @@ Bed (config): 100 x 120 x 100 mm
 
 ## Preview
 
-Open `preview/infinite-foldagon-fidget-inventory-plate.stl` or `preview/infinite-foldagon-fidget-plate.stl` in Orca if present.
+Regenerate a preview STL with: `python scripts/tina2_prep.py preview inbox/infinite-foldagon-fidget --prefix infinite-foldagon-fidget`

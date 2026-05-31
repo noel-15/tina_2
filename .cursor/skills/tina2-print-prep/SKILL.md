@@ -1,37 +1,44 @@
 ﻿---
 name: tina2-print-prep
 description: >-
-  Prepare MakersWorld STLs for WEEFUN Tina 2 — scale to bed, slice with Orca/Prusa CLI,
-  publish G-code to GitHub noel-15/tina_2, optional microSD deploy. Use for Tina 2,
-  MakersWorld, G-code, scaling, slicing, or tina_2 repo.
+  End-to-end WEEFUN Tina 2 prep for user-provided MakersWorld models — combine parts on
+  one plate, self-review, Orca slice, publish G-code to GitHub noel-15/tina_2. Use when
+  the user names a model, Tina 2, MakersWorld, plate G-code, or wants print prep done for them.
 ---
 
-# Tina 2 print prep
+# Tina 2 autonomous print prep (agent workflow)
 
-## Before running
+The user provides **preferred models** (MakersWorld link or files in `inbox/<slug>/`).
+The agent runs the full pipeline; the user does not slice manually.
 
-1. Read [config/tina2.yaml](../../config/tina2.yaml).
-2. Never read, log, or commit `list.txt` or `GITHUB_TINA_PAT`.
-3. MakersWorld: download **STL/CAD** to `models/inbox/` (not Bambu-only G-code).
+## Agent workflow (every model)
 
-## Commands (from repo root)
+1. **Ingest:** User downloads **STL/CAD/3MF** into `inbox/<slug>/` (agent cannot reliably log into MakersWorld).
+2. **Combine:** Run `prepare` on the folder (or single file path).
+3. **Self-review:** Run `review` on the same folder; fix config/excludes if FAIL.
+4. **Show user:** Report paths:
+   - **Print folder:** `prints/<prefix>/` (`.gcode` + **`README.md`**)
+   - **GitHub:** `https://github.com/noel-15/tina_2/tree/main/prints/<prefix>`
+5. **Publish:** Always use `publish_print_folder` (via `prepare` with push enabled).
+
+Never read or commit `GITHUB_TINA_PAT` / `list.txt`.
+
+## Commands
 
 ```powershell
-pip install -r requirements.txt
-python scripts/tina2_prep.py preview "Fidget+Finger+Massager+2000!"
-python scripts/tina2_prep.py prepare "Fidget+Finger+Massager+2000!" --prefix fidget-finger-massager-2000
-python scripts/tina2_prep.py prepare models/inbox/single-part.stl
+cd C:\Users\bugon\Desktop\Tina_2
+python scripts/tina2_prep.py prepare inbox/my-kit --prefix my-kit
+python scripts/tina2_prep.py review inbox/my-kit --prefix my-kit
+python scripts/tina2_prep.py preview inbox/my-kit --prefix my-kit
 ```
 
-**Folders:** `prepare` on a folder always produces **one combined** `-plate.gcode` (see `plate.exclude_by_default` in config). Use `--separate` only if you need one file per STL.
+Single STL or **3MF:** `prepare inbox/my-kit/model.3mf --prefix my-kit`
 
-**Preview:** `preview` opens **Orca Slicer** with the same STLs that would go on the plate — use Prepare / slice preview there. GitHub only stores G-code text, not a 3D view.
+**Optional:** `preview` opens Orca; suggest [gcode.ws](https://gcode.ws/) for toolpath view.
 
-## GitHub
+## Limits
 
-- Remote: https://github.com/noel-15/tina_2
-- Publish only under `gcode/` (prefer single `*-plate.gcode` per model kit).
-
-## Slicer setup
+- Agent **cannot** truly see a 3D render; self-review is **dimensions, bed fit, file size, slice success**.
+- User **visual** check: `preview` command (writes to `.cache/preview/`).
 
 See [config/slicer/README.md](../../config/slicer/README.md).
