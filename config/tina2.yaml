@@ -1,0 +1,27 @@
+﻿printer:
+  bed_x_mm: 100
+  bed_y_mm: 120
+  bed_z_mm: 100
+  fit_margin: 0.95
+
+paths:
+  inbox: models/inbox
+  work: models/work
+  out: models/out
+  gcode: gcode
+
+slicer:
+  type: orca
+  executable: "C:/Program Files/OrcaSlicer/orca-slicer.exe"
+  settings: []
+  extra_args: []
+
+github:
+  enabled: true
+  remote: https://github.com/noel-15/tina_2.git
+  branch: main
+  token_file: "C:/Users/bugon/.config/list.txt"
+  token_key: GITHUB_TINA_PAT
+
+sd:
+  drive: null

@@ -1,0 +1,16 @@
+﻿# Secrets
+.env
+**/list.txt
+*token*
+models/inbox/**
+models/work/**
+!models/inbox/.gitkeep
+!models/work/.gitkeep
+*.stl
+*.3mf
+*.step
+*.zip
+!models/test/*.stl
+models/out/**
+__pycache__/
+.venv/
