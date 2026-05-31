@@ -109,13 +109,37 @@ def convert_3mf_via_orca(cfg: dict, src: Path, dest: Path) -> Path:
     raise SystemExit(f"No STL produced from 3MF: {src}")
 
 
+def convert_3mf_recenter_on_bed(src: Path, dest: Path, cfg: dict, margin_mm: float = 5.0) -> Path:
+    """Load 3MF mesh and place it on the bed origin (fixes Bambu plate coordinates)."""
+    mesh = load_mesh(src)
+    b = mesh.bounds
+    out = mesh.copy()
+    out.apply_translation([-b[0][0] + margin_mm, -b[0][1] + margin_mm, -b[0][2]])
+    ext = out.bounds[1] - out.bounds[0]
+    p = cfg["printer"]
+    if ext[0] > p["bed_x_mm"] or ext[1] > p["bed_y_mm"] or ext[2] > p["bed_z_mm"]:
+        factor = fit_factor(mesh, cfg)
+        print(f"3MF exceeds bed; scaling by {factor:.4f}")
+        out = scale_mesh(out, factor)
+        b2 = out.bounds
+        out.apply_translation([-b2[0][0] + margin_mm, -b2[0][1] + margin_mm, -b2[0][2]])
+    write_stl(out, dest)
+    print(f"3MF mesh placed on Tina bed: {dest.name} ({ext[0]:.1f}x{ext[1]:.1f}x{ext[2]:.1f} mm)")
+    return dest
+
+
 def convert_to_stl(src: Path, dest: Path, cfg: dict | None = None) -> Path:
     if src.suffix.lower() == ".stl":
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dest)
         return dest
     if src.suffix.lower() == ".3mf":
-        return convert_3mf_via_orca(cfg or load_config(), src, dest)
+        cfg = cfg or load_config()
+        try:
+            return convert_3mf_via_orca(cfg, src, dest)
+        except SystemExit:
+            print("Orca 3MF export failed; loading mesh and placing on bed…")
+            return convert_3mf_recenter_on_bed(src, dest, cfg)
     mesh = load_mesh(src)
     write_stl(mesh, dest)
     return dest
@@ -415,7 +439,16 @@ def prepare_one(
             mesh = scale_mesh(mesh, scale)
         write_stl(mesh, work_stl)
         slice_input = work_stl
-    gcode = run_slice(cfg, slice_input, out_dir, gcode_name=f"{slug}-plate.gcode")
+    try:
+        gcode = run_slice(cfg, slice_input, out_dir, gcode_name=f"{slug}-plate.gcode")
+    except SystemExit:
+        if src.suffix.lower() == ".3mf" and slice_input.resolve() == src.resolve():
+            print("3MF plate slice failed (model often off-bed); repositioning on Tina bed…")
+            convert_3mf_recenter_on_bed(src, work_stl, cfg)
+            slice_input = work_stl
+            gcode = run_slice(cfg, slice_input, out_dir, gcode_name=f"{slug}-plate.gcode")
+        else:
+            raise
     print(f"G-code: {gcode}")
     if not no_push:
         notes = [f"Source file: `{src.name}`"]
